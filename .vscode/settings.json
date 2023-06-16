@@ -1,0 +1,7 @@
+{
+    "[rust]": {
+        //"editor.defaultFormatter": "rust-lang.rust", // Makes the magic
+        "editor.defaultFormatter": "rust-lang.rust-analyzer",
+        "editor.formatOnSave": true // Optional
+    },
+}

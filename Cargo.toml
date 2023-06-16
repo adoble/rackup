@@ -1,0 +1,10 @@
+[package]
+name = "rackup"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+rebackup = "1.0.2"
+clap = {version = "4.3.4", features = ["derive"]}
