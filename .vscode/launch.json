@@ -1,0 +1,45 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'rackup'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=rackup",
+                    "--package=rackup"
+                ],
+                "filter": {
+                    "name": "rackup",
+                    "kind": "bin"
+                }
+            },
+            "args": ["./test_data/test.txt", "./test_data/backup"],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'rackup'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=rackup",
+                    "--package=rackup"
+                ],
+                "filter": {
+                    "name": "rackup",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}

@@ -8,3 +8,9 @@ edition = "2021"
 [dependencies]
 rebackup = "1.0.2"
 clap = {version = "4.3.4", features = ["derive"]}
+anyhow = "1.0.71"
+
+# Used for testing  
+# TODO only import during tests
+tempfile = "3"
+
