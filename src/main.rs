@@ -13,7 +13,7 @@ use clap::Parser;
 use rebackup::{fail, walk, WalkerConfig};
 use std::fs::{self, File};
 use std::io::{self, Read, Write};
-use std::path::PathBuf;
+use std::path::{Component, Components, PathBuf, Prefix};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -35,27 +35,36 @@ fn main() {
 
     let cli = Args::parse();
 
-    let source_file_name = cli.source;
-
-    let source_path = PathBuf::from(source_file_name);
+    //let source_dir_path = PathBuf::from(source_dir_name);
+    let source_dir_path = cli.source;
     //let backup_path =         PathBuf::from("/c/Users/T440s/Documents/rust-projects/rackup/test_data/backup");
 
-    let backup_path = PathBuf::from(cli.backup);
+    let backup_dir_path = cli.backup; // TODO as environment variable
 
-    // if let Ok(source_file_name) = source_file.into_os_string().into_string() {
-    //     println!("backing up {}", source_file_name);
-    // } else {
-    //     // TODO error handling
-    //     panic!();
-    // }
+    // NOTE: This can be shortened to `WalkerConfig::new(vec![])`
+    //       (expanded here for explanations purpose)
+    let config = WalkerConfig {
+        rules: vec![],
+        follow_symlinks: false,
+        drop_empty_dirs: false,
+    };
 
-    let copy_action = is_newer(&source_path, &backup_path);
+    let source_files_list =
+        walk(&source_dir_path, &config).expect("Failed to build the files list");
 
-    if copy_action {
-        if let Err(err) = copy_file(&source_path, &backup_path) {
-            eprintln!("Error copying file: {}", err);
-        } else {
-            println!("File copied successfully.");
+    let mut components = source_files_list[0].components();
+    for c in components {
+        println!("component:{:?}", c);
+    }
+
+    for source_file_path in source_files_list {
+        let backup_file_path = create_backup_file_path(&source_file_path, &backup_dir_path);
+        if is_newer(&source_file_path, &backup_file_path) {
+            if let Err(err) = copy_file(&source_dir_path, &backup_file_path) {
+                eprintln!("Error copying file: {}", err);
+            } else {
+                println!("File copied successfully.");
+            }
         }
     }
 }
@@ -97,6 +106,52 @@ fn copy_file(source_file_path: &PathBuf, backup_file_path: &PathBuf) -> io::Resu
     backup_file.write_all(&source_file_content)?;
 
     Ok(())
+}
+
+// Create the path of the file being backed up, i.e.:
+// With source file: C:/Users/bob/Documents/test.txt
+// and backup directory C:/Users/bob/Backup it will create a PathBuf of
+//      C:/Users/bob/Backup/c/Users/bob/Documents/test.txt
+
+fn create_backup_file_path(source_file_path: &PathBuf, backup_dir_path: &PathBuf) -> PathBuf {
+    let components = source_file_path.components();
+
+    let mut backup_file_path = PathBuf::from(backup_dir_path);
+
+    let mut sub_path = String::new();
+
+    for component in components {
+        match component {
+            Component::Prefix(p) => match p.kind() {
+                Prefix::Verbatim(osstr) | Prefix::DeviceNS(osstr) => {
+                    sub_path.push_str(osstr.to_str().unwrap_or("?"))
+                }
+                Prefix::VerbatimUNC(hostname, sharename) | Prefix::UNC(hostname, sharename) => {
+                    sub_path.push_str(hostname.to_str().unwrap_or("?"));
+                    sub_path.push_str("/");
+                    sub_path.push_str(sharename.to_str().unwrap_or("?"));
+                }
+                Prefix::Disk(disk_chr) | Prefix::VerbatimDisk(disk_chr) => {
+                    sub_path.push(disk_chr as char);
+                }
+            },
+            Component::RootDir => sub_path.push_str("/"),
+            Component::Normal(c) => {
+                sub_path.push_str(c.to_str().unwrap());
+                sub_path.push_str("/");
+            }
+            _ => sub_path.push_str("unknown"),
+        };
+    }
+
+    // Remove the trailing "/"
+    sub_path.pop();
+
+    backup_file_path.push(sub_path);
+
+    println!("{backup_file_path:?}");
+
+    backup_file_path
 }
 
 #[cfg(test)]
@@ -247,5 +302,36 @@ mod tests {
         test_dir.close()?;
 
         Ok(())
+    }
+
+    #[test]
+    fn test_create_backup_path() {
+        // With source file: C:/Users/bob/Documents/test.txt
+        // and backup directory C:/Users/bob/Backup it will create a path of
+        //  C:/Users/bob/Backup/c/Users/bob/Documents/test.txt
+
+        let mut source_file_path = PathBuf::from("C:/Users/bob/Documents/test.txt");
+        let mut backup_dir_path = PathBuf::from("C:/Users/bob/Backup");
+
+        let mut backup_path = create_backup_file_path(&source_file_path, &backup_dir_path);
+
+        assert_eq!(
+            PathBuf::from("C:/Users/bob/Backup/C/Users/bob/Documents/test.txt"),
+            backup_path
+        );
+
+        // With other drives
+        // With source file: D:/Users/bob/Documents/test.txt
+        // and backup directory G:/Users/bob/Backup it will create a path of
+        //  G:/Users/bob/Backup/D/Users/bob/Documents/test.txt
+        source_file_path = PathBuf::from("D:/Users/bob/Documents/test.txt");
+        backup_dir_path = PathBuf::from("G:/Users/bob/Backup");
+
+        backup_path = create_backup_file_path(&source_file_path, &backup_dir_path);
+
+        assert_eq!(
+            PathBuf::from("G:/Users/bob/Backup/D/Users/bob/Documents/test.txt"),
+            backup_path
+        );
     }
 }
