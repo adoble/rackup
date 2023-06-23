@@ -413,7 +413,7 @@ mod tests {
             test_dir.path().join("Backup"),
         );
 
-        // Check the results
+        // Check if the files and directories have been created.
         // First get the path of the temp directory.
         let tail = test_dir.path().to_str().unwrap().to_string();
         // Assuming that the temp dir used for test in the C: drive. For the backup path remove
@@ -446,6 +446,19 @@ mod tests {
             .exists());
 
         assert!(full_backup_path.join("TestUser/DocumentsC").exists());
+
+        // Sample if the files contain the data
+        let p = full_backup_path.join("TestUser/DocumentsA/fileAA.txt");
+        let mut contents = String::new();
+        let mut file = fs::File::open(p)?;
+        file.read_to_string(&mut contents)?;
+        assert_eq!(contents, "fileAA.txt");
+
+        let p = full_backup_path.join("TestUser/DocumentsB/fileBB.doc");
+        let mut file = fs::File::open(p)?;
+        contents.clear();
+        file.read_to_string(&mut contents)?;
+        assert_eq!(contents, "fileBB.doc");
 
         Ok(())
     }
