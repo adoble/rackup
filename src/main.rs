@@ -366,7 +366,7 @@ mod tests {
 
     #[test]
     fn test_perform_new_backup() -> Result<(), std::io::Error> {
-        // Create a temporary directoy/file stucture to back up. Each file contains a with the name of the file.
+        // Create a temporary directory/file stucture to back up. Each file contains a with the name of the file.
         // Structure is:
         // TempDir
         //   -> TestUser
@@ -380,32 +380,7 @@ mod tests {
         //       --> DocumentsC
         //           --> (empty)
         //
-        let test_dir = tempfile::tempdir()?;
-
-        fs::create_dir(test_dir.path().join("TestUser"))?;
-
-        fs::create_dir(test_dir.path().join("TestUser/DocumentsA"))?;
-        fs::create_dir(test_dir.path().join("TestUser/DocumentsB"))?;
-        fs::create_dir(test_dir.path().join("TestUser/DocumentsC"))?;
-
-        let mut f = File::create(test_dir.path().join("TestUser/DocumentsA/fileAA.txt"))?;
-        write!(f, "fileAA.txt")?;
-        f = File::create(test_dir.path().join("TestUser/DocumentsA/fileAB.txt"))?;
-        write!(f, "fileAB.txt")?;
-        f = File::create(test_dir.path().join("TestUser/DocumentsB/fileBA.pdf"))?;
-        write!(f, "fileBA.pdf")?;
-        f = File::create(test_dir.path().join("TestUser/DocumentsB/fileBB.doc"))?;
-        write!(f, "fileBB.doc")?;
-        f = File::create(test_dir.path().join("TestUser/DocumentsB/fileBC.txt"))?;
-        write!(f, "fileBC.txt")?;
-
-        // A few checks that te test code works
-        assert!(test_dir
-            .path()
-            .join("TestUser/DocumentsA/fileAB.txt")
-            .exists());
-
-        assert!(test_dir.path().join("TestUser/DocumentsC").exists());
+        let test_dir = setup_file_structure()?;
 
         // Test perform_backup()
         perform_backup(
@@ -461,5 +436,45 @@ mod tests {
         assert_eq!(contents, "fileBB.doc");
 
         Ok(())
+    }
+
+    // Test utilities
+
+    // Create a temporary directory/file stucture to back up. Each file contains a with the name of the file.
+    // Structure is:
+    // TempDir
+    //   -> TestUser
+    //       -> DocumentsA
+    //          --> fileAA.txt
+    //          --> fileBA.txt
+    //       --> DocumentsB
+    //           --> fileBA.pdf
+    //           --> fileBB.doc
+    //           --> fileBC.txt
+    //       --> DocumentsC
+    //           --> (empty)
+    //
+    fn setup_file_structure() -> Result<tempfile::TempDir, io::Error> {
+        let test_dir = tempfile::tempdir()?;
+        fs::create_dir(test_dir.path().join("TestUser"))?;
+        fs::create_dir(test_dir.path().join("TestUser/DocumentsA"))?;
+        fs::create_dir(test_dir.path().join("TestUser/DocumentsB"))?;
+        fs::create_dir(test_dir.path().join("TestUser/DocumentsC"))?;
+        let mut f = File::create(test_dir.path().join("TestUser/DocumentsA/fileAA.txt"))?;
+        write!(f, "fileAA.txt")?;
+        f = File::create(test_dir.path().join("TestUser/DocumentsA/fileAB.txt"))?;
+        write!(f, "fileAB.txt")?;
+        f = File::create(test_dir.path().join("TestUser/DocumentsB/fileBA.pdf"))?;
+        write!(f, "fileBA.pdf")?;
+        f = File::create(test_dir.path().join("TestUser/DocumentsB/fileBB.doc"))?;
+        write!(f, "fileBB.doc")?;
+        f = File::create(test_dir.path().join("TestUser/DocumentsB/fileBC.txt"))?;
+        write!(f, "fileBC.txt")?;
+        assert!(test_dir
+            .path()
+            .join("TestUser/DocumentsA/fileAB.txt")
+            .exists());
+        assert!(test_dir.path().join("TestUser/DocumentsC").exists());
+        Ok(test_dir)
     }
 }
