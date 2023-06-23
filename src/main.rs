@@ -10,10 +10,10 @@ use anyhow::Result;
 /// * Files are only backed up up if they are newer then the one in the backup.  
 // Use the rebackup crate (https://docs.rs/rebackup/latest/rebackup/).
 use clap::Parser;
-use rebackup::{fail, walk, WalkerConfig};
-use std::fs::{self, File};
+use rebackup::{walk, WalkerConfig};
+use std::fs;
 use std::io::{self, Read, Write};
-use std::path::{Component, Components, PathBuf, Prefix};
+use std::path::{Component, Path, PathBuf, Prefix};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -140,7 +140,7 @@ fn copy_file(source_file_path: &PathBuf, backup_file_path: &PathBuf) -> io::Resu
 // and backup directory C:/Users/bob/Backup it will create a PathBuf of
 //      C:/Users/bob/Backup/C/Users/bob/Documents/test.txt
 
-fn create_backup_file_path(source_file_path: &PathBuf, backup_dir_path: &PathBuf) -> PathBuf {
+fn create_backup_file_path(source_file_path: &Path, backup_dir_path: &Path) -> PathBuf {
     let components = source_file_path.components();
 
     let mut backup_file_path = PathBuf::from(backup_dir_path);
@@ -150,23 +150,23 @@ fn create_backup_file_path(source_file_path: &PathBuf, backup_dir_path: &PathBuf
     for component in components {
         match component {
             Component::Prefix(p) => match p.kind() {
-                Prefix::Verbatim(osstr) | Prefix::DeviceNS(osstr) => {
+                Prefix::Verbatim(_osstr) | Prefix::DeviceNS(_osstr) => {
                     //sub_path.push_str(osstr.to_str().unwrap_or("?"))
                     sub_path.push_str(""); // Ignored
                 }
                 Prefix::VerbatimUNC(hostname, sharename) | Prefix::UNC(hostname, sharename) => {
                     sub_path.push_str(hostname.to_str().unwrap_or("?"));
-                    sub_path.push_str("/");
+                    sub_path.push('/');
                     sub_path.push_str(sharename.to_str().unwrap_or("?"));
                 }
                 Prefix::Disk(disk_chr) | Prefix::VerbatimDisk(disk_chr) => {
                     sub_path.push(disk_chr as char);
                 }
             },
-            Component::RootDir => sub_path.push_str("/"),
+            Component::RootDir => sub_path.push('/'),
             Component::Normal(c) => {
                 sub_path.push_str(c.to_str().unwrap());
-                sub_path.push_str("/");
+                sub_path.push('/');
             }
             _ => sub_path.push_str("unknown"),
         };
