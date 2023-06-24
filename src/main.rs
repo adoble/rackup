@@ -10,10 +10,11 @@ use anyhow::Result;
 /// * Files are only backed up up if they are newer then the one in the backup.  
 // Use the rebackup crate (https://docs.rs/rebackup/latest/rebackup/).
 use clap::Parser;
-use rebackup::{walk, WalkerConfig};
-use std::fs;
+use rebackup::{walk, WalkerConfig, WalkerRule, WalkerRuleResult};
 use std::io::{self, Read, Write};
 use std::path::{Component, Path, PathBuf, Prefix};
+use std::process::Command;
+use std::{env, fs};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -21,7 +22,7 @@ struct Args {
     /// The source directory to be backed up
     source: PathBuf,
 
-    // The backup file
+    /// The backup directory or drive
     backup: PathBuf,
 
     /// The target directory where the backup is made. Does not need to be specified if
@@ -45,10 +46,45 @@ fn main() {
 }
 
 fn perform_backup(source_dir_path: &PathBuf, backup_dir_path: &PathBuf) {
+    // Setup the rule to ignore files that git ignnores
+    // from https://docs.rs/rebackup/1.0.2/rebackup/index.html
+    let gitignore_rule = WalkerRule {
+        name: "gitignore",
+        description: None,
+        only_for: None,
+        matches: Box::new(|path, _, _| path.ancestors().any(|path| path.join(".git").is_dir())),
+        action: Box::new(|dir, _, _| {
+            let cwd = env::current_dir()?;
+
+            if dir.is_dir() {
+                env::set_current_dir(dir)?;
+            } else if let Some(parent) = dir.parent() {
+                env::set_current_dir(parent)?;
+            }
+
+            let is_excluded = Command::new("git")
+                .arg("check-ignore")
+                .arg(dir.to_string_lossy().to_string())
+                .output();
+
+            // Restore the current directory before returning eventual error from the command
+            env::set_current_dir(cwd)?;
+
+            if is_excluded?.status.success() {
+                Ok(WalkerRuleResult::ExcludeItem)
+            } else {
+                Ok(WalkerRuleResult::IncludeItem)
+            }
+        }),
+    };
+
+    // All rules
+    let rules = vec![gitignore_rule];
+
     // NOTE: This can be shortened to `WalkerConfig::new(vec![])`
     //       (expanded here for explanations purpose)
     let config = WalkerConfig {
-        rules: vec![],
+        rules: rules,
         follow_symlinks: false,
         drop_empty_dirs: false,
     };
