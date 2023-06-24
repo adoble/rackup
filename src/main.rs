@@ -185,7 +185,7 @@ mod tests {
     use super::*;
 
     use core::time;
-    use std::fs::File;
+    use std::fs::{File, OpenOptions};
     use std::io::{self, Write};
     //use tempfile::tempdir;
 
@@ -366,20 +366,6 @@ mod tests {
 
     #[test]
     fn test_perform_new_backup() -> Result<(), std::io::Error> {
-        // Create a temporary directory/file stucture to back up. Each file contains a with the name of the file.
-        // Structure is:
-        // TempDir
-        //   -> TestUser
-        //       -> DocumentsA
-        //          --> fileAA.txt
-        //          --> fileBA.txt
-        //       --> DocumentsB
-        //           --> fileBA.pdf
-        //           --> fileBB.doc
-        //           --> fileBC.txt
-        //       --> DocumentsC
-        //           --> (empty)
-        //
         let test_dir = setup_file_structure()?;
 
         // Test perform_backup()
@@ -388,7 +374,7 @@ mod tests {
         perform_backup(source_dir_path, backup_dir_path.clone());
 
         // Check if the files and directories have been created.
-        let full_backup_path = get_full_backup_path(&test_dir, backup_dir_path);
+        let full_backup_path = get_full_backup_path(&test_dir, &backup_dir_path);
 
         assert!(test_dir.path().join("Backup").exists());
         assert!(full_backup_path.join("TestUser/DocumentsA").exists());
@@ -430,7 +416,48 @@ mod tests {
         Ok(())
     }
 
-    fn get_full_backup_path(test_dir: &tempfile::TempDir, backup_dir_path: PathBuf) -> PathBuf {
+    #[test]
+    fn test_perform_overwrite_backup() -> Result<(), std::io::Error> {
+        let test_dir = setup_file_structure()?;
+
+        // Test perform_backup()
+        let source_dir_path = test_dir.path().join("TestUser");
+        let backup_dir_path = test_dir.path().join("Backup");
+        perform_backup(source_dir_path.clone(), backup_dir_path.clone());
+
+        let full_backup_path = get_full_backup_path(&test_dir, &backup_dir_path);
+
+        // Change two of the files in the source
+        let p = full_backup_path.join("TestUser/DocumentsA/fileAA.txt");
+        let mut file = OpenOptions::new().append(true).open(p).unwrap();
+        //file.write_all("fileAA.txt".as_bytes()).unwrap();
+        file.write_all(" has been updated".as_bytes()).unwrap();
+
+        let p = full_backup_path.join("TestUser/DocumentsB/fileBB.doc");
+        let mut file = OpenOptions::new().append(true).open(p).unwrap();
+        //file.write_all("fileBB.doc".as_bytes()).unwrap();
+        file.write_all(" has been updated".as_bytes()).unwrap();
+
+        // Now perform the backup again
+        perform_backup(source_dir_path.clone(), backup_dir_path.clone());
+
+        // Now check that the changed file have been overwritten
+        let p = full_backup_path.join("TestUser/DocumentsA/fileAA.txt");
+        let mut contents = String::new();
+        let mut file = fs::File::open(p)?;
+        file.read_to_string(&mut contents)?;
+        assert_eq!(contents, "fileAA.txt has been updated");
+
+        let p = full_backup_path.join("TestUser/DocumentsB/fileBB.doc");
+        let mut file = fs::File::open(p)?;
+        contents.clear();
+        file.read_to_string(&mut contents)?;
+        assert_eq!(contents, "fileBB.doc has been updated");
+
+        Ok(())
+    }
+
+    fn get_full_backup_path(test_dir: &tempfile::TempDir, backup_dir_path: &PathBuf) -> PathBuf {
         // First get the path of the temp directory.
         let tail = test_dir.path().to_str().unwrap().to_string();
         // Assuming that the temp dir used for test in the C: drive. For the backup path remove
