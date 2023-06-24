@@ -41,10 +41,10 @@ fn main() {
 
     let backup_dir_path = cli.backup; // TODO as environment variable
 
-    perform_backup(source_dir_path, backup_dir_path);
+    perform_backup(&source_dir_path, &backup_dir_path);
 }
 
-fn perform_backup(source_dir_path: PathBuf, backup_dir_path: PathBuf) {
+fn perform_backup(source_dir_path: &PathBuf, backup_dir_path: &PathBuf) {
     // NOTE: This can be shortened to `WalkerConfig::new(vec![])`
     //       (expanded here for explanations purpose)
     let config = WalkerConfig {
@@ -371,7 +371,7 @@ mod tests {
         // Test perform_backup()
         let source_dir_path = test_dir.path().join("TestUser");
         let backup_dir_path = test_dir.path().join("Backup");
-        perform_backup(source_dir_path, backup_dir_path.clone());
+        perform_backup(&source_dir_path, &backup_dir_path);
 
         // Check if the files and directories have been created.
         let full_backup_path = get_full_backup_path(&test_dir, &backup_dir_path);
@@ -423,7 +423,7 @@ mod tests {
         // Test perform_backup()
         let source_dir_path = test_dir.path().join("TestUser");
         let backup_dir_path = test_dir.path().join("Backup");
-        perform_backup(source_dir_path.clone(), backup_dir_path.clone());
+        perform_backup(&source_dir_path, &backup_dir_path);
 
         let full_backup_path = get_full_backup_path(&test_dir, &backup_dir_path);
 
@@ -439,7 +439,7 @@ mod tests {
         file.write_all(" has been updated".as_bytes()).unwrap();
 
         // Now perform the backup again
-        perform_backup(source_dir_path.clone(), backup_dir_path.clone());
+        perform_backup(&source_dir_path, &backup_dir_path);
 
         // Now check that the changed file have been overwritten
         let p = full_backup_path.join("TestUser/DocumentsA/fileAA.txt");
