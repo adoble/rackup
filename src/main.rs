@@ -383,20 +383,12 @@ mod tests {
         let test_dir = setup_file_structure()?;
 
         // Test perform_backup()
-        perform_backup(
-            test_dir.path().join("TestUser"),
-            test_dir.path().join("Backup"),
-        );
+        let source_dir_path = test_dir.path().join("TestUser");
+        let backup_dir_path = test_dir.path().join("Backup");
+        perform_backup(source_dir_path, backup_dir_path.clone());
 
         // Check if the files and directories have been created.
-        // First get the path of the temp directory.
-        let tail = test_dir.path().to_str().unwrap().to_string();
-        // Assuming that the temp dir used for test in the C: drive. For the backup path remove
-        // the C: and replace it with C
-        let tail_norm = tail.replace(":", "");
-        // Get the full backup path, i.e.
-        // <temp test dir>/Backup/<temp test dir with C: changed to C>
-        let full_backup_path = test_dir.path().join("Backup").join(tail_norm);
+        let full_backup_path = get_full_backup_path(&test_dir, backup_dir_path);
 
         assert!(test_dir.path().join("Backup").exists());
         assert!(full_backup_path.join("TestUser/DocumentsA").exists());
@@ -436,6 +428,19 @@ mod tests {
         assert_eq!(contents, "fileBB.doc");
 
         Ok(())
+    }
+
+    fn get_full_backup_path(test_dir: &tempfile::TempDir, backup_dir_path: PathBuf) -> PathBuf {
+        // First get the path of the temp directory.
+        let tail = test_dir.path().to_str().unwrap().to_string();
+        // Assuming that the temp dir used for test in the C: drive. For the backup path remove
+        // the C: and replace it with C
+        let tail_norm = tail.replace(":", "");
+        // Get the full backup path, i.e.
+        // <temp test dir>/Backup/<temp test dir with C: changed to C>
+        //let full_backup_path = test_dir.path().join("Backup").join(tail_norm);
+        let full_backup_path = backup_dir_path.join(tail_norm);
+        full_backup_path
     }
 
     // Test utilities
