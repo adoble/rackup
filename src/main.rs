@@ -11,6 +11,7 @@ use anyhow::Result;
 // Use the rebackup crate (https://docs.rs/rebackup/latest/rebackup/).
 use clap::Parser;
 use rebackup::{walk, WalkerConfig, WalkerRule, WalkerRuleResult};
+use std::ffi::OsStr;
 use std::io::{self, Read, Write};
 use std::path::{Component, Path, PathBuf, Prefix};
 use std::process::Command;
@@ -78,8 +79,28 @@ fn perform_backup(source_dir_path: &PathBuf, backup_dir_path: &PathBuf) {
         }),
     };
 
+    let exe_rule = WalkerRule {
+        name: "noexe",
+        description: Some("Do not backup exe files".to_string()),
+        //only_for: Some(rebackup::WalkerItemType::Directory),
+        only_for: Some(rebackup::WalkerItemType::File),
+        //matches: Box::new(|path, _, _| path.join(".exe").is_file()),
+        matches: Box::new(|path, _, _| path.is_file()),
+        action: Box::new(|path, _, _| {
+            let ext = path.extension().unwrap_or(OsStr::new(""));
+
+            if ext == "exe" {
+                Ok(WalkerRuleResult::ExcludeItem)
+            } else {
+                Ok(WalkerRuleResult::IncludeItem)
+            }
+        }),
+    };
+
+    // Don't backup any *.exe files
+
     // All rules
-    let rules = vec![gitignore_rule];
+    let rules = vec![gitignore_rule, exe_rule];
 
     // NOTE: This can be shortened to `WalkerConfig::new(vec![])`
     //       (expanded here for explanations purpose)
