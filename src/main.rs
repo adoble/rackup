@@ -1,11 +1,11 @@
-use anyhow::Result;
 /// Performs a simple backup on a specified directory.
 ///
 /// The files it backs up are determined by the following rules.
 ///
 /// * It traverses the directory specified looking for files that shoud be backed up
 /// * If a .gitignore file is found then the files and driectories specified in it will not be backed up.
-/// * If a .trackup_ignore file is found  then the files and driectories specified in it will not be backed up.
+/// * [TODO]If a .rackup_ignore file is found  then the files and directories specified in it will not be backed up.
+/// * .exe files will not be backed up.
 /// This file will take precendence over any .gitignore file.
 /// * Files are only backed up up if they are newer then the one in the backup.  
 // Use the rebackup crate (https://docs.rs/rebackup/latest/rebackup/).
@@ -33,7 +33,7 @@ struct Args {
 }
 
 fn main() {
-    println!("Backing up (TODO)");
+    println!("Backing up ...");
 
     let cli = Args::parse();
 
@@ -87,7 +87,7 @@ fn perform_backup(source_dir_path: &PathBuf, backup_dir_path: &PathBuf) {
         //matches: Box::new(|path, _, _| path.join(".exe").is_file()),
         matches: Box::new(|path, _, _| path.is_file()),
         action: Box::new(|path, _, _| {
-            let ext = path.extension().unwrap_or(OsStr::new(""));
+            let ext = path.extension().unwrap_or_else(|| OsStr::new(""));
 
             if ext == "exe" {
                 Ok(WalkerRuleResult::ExcludeItem)
@@ -105,18 +105,12 @@ fn perform_backup(source_dir_path: &PathBuf, backup_dir_path: &PathBuf) {
     // NOTE: This can be shortened to `WalkerConfig::new(vec![])`
     //       (expanded here for explanations purpose)
     let config = WalkerConfig {
-        rules: rules,
+        rules,
         follow_symlinks: false,
         drop_empty_dirs: false,
     };
 
-    let source_files_list =
-        walk(&source_dir_path, &config).expect("Failed to build the files list");
-
-    // let mut components = source_files_list[0].components();
-    // for c in components {
-    //     println!("component:{:?}", c);
-    // }
+    let source_files_list = walk(source_dir_path, &config).expect("Failed to build the files list");
 
     for source_file_path in source_files_list {
         let backup_file_path = create_backup_file_path(&source_file_path, &backup_dir_path);
