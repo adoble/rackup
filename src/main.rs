@@ -25,11 +25,6 @@ struct Args {
 
     /// The backup directory or drive
     backup: PathBuf,
-
-    /// The target directory where the backup is made. Does not need to be specified if
-    /// setup as an environment varaiable (TODO)
-    #[arg(short, long)]
-    target: Option<String>,
 }
 
 fn main() {
