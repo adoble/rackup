@@ -32,11 +32,9 @@ fn main() {
 
     let cli = Args::parse();
 
-    //let source_dir_path = PathBuf::from(source_dir_name);
     let source_dir_path = cli.source;
-    //let backup_path =         PathBuf::from("/c/Users/T440s/Documents/rust-projects/rackup/test_data/backup");
 
-    let backup_dir_path = cli.backup; // TODO as environment variable
+    let backup_dir_path = cli.backup;
 
     perform_backup(&source_dir_path, &backup_dir_path);
 }
@@ -91,8 +89,6 @@ fn perform_backup(source_dir_path: &PathBuf, backup_dir_path: &PathBuf) {
             }
         }),
     };
-
-    // Don't backup any *.exe files
 
     // All rules
     let rules = vec![gitignore_rule, exe_rule];
@@ -233,9 +229,6 @@ mod tests {
     use core::time;
     use std::fs::{File, OpenOptions};
     use std::io::{self, Write};
-    //use tempfile::tempdir;
-
-    //use crate::is_newer;
 
     #[test]
     fn test_is_newer_where_backup_file_does_not_exist() -> Result<(), std::io::Error> {
