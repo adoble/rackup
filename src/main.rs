@@ -39,7 +39,7 @@ fn main() {
     perform_backup(&source_dir_path, &backup_dir_path);
 }
 
-fn perform_backup(source_dir_path: &PathBuf, backup_dir_path: &PathBuf) {
+fn perform_backup(source_dir_path: &Path, backup_dir_path: &Path) {
     // Setup the rule to ignore files that git ignnores
     // from https://docs.rs/rebackup/1.0.2/rebackup/index.html
     let gitignore_rule = WalkerRule {
@@ -104,7 +104,7 @@ fn perform_backup(source_dir_path: &PathBuf, backup_dir_path: &PathBuf) {
     let source_files_list = walk(source_dir_path, &config).expect("Failed to build the files list");
 
     for source_file_path in source_files_list {
-        let backup_file_path = create_backup_file_path(&source_file_path, &backup_dir_path);
+        let backup_file_path = create_backup_file_path(&source_file_path, backup_dir_path);
 
         if is_newer(&source_file_path, &backup_file_path) {
             if let Err(err) = copy_file(&source_file_path, &backup_file_path) {
